@@ -48,11 +48,14 @@
         </template>
       </a-table>
     </a-layout-content>
+
+    
   </a-layout>
 </template>
 <script lang="ts">
 import { defineComponent, onMounted, ref } from "vue";
 import axios from "axios";
+
 export default defineComponent({
   name: "AdminEbook",
   setup() {
@@ -102,21 +105,41 @@ export default defineComponent({
         slots: { customRender: "action" },
       },
     ];
+
+    // -------- 表单 ---------
+    const ebook = ref({});
+    const modalVisible = ref(false);
+    const modalLoading = ref(false);
+    const handleModalOk = () => {
+      modalLoading.value = true;
+      axios.post("/ebook/save", ebook.value).then((response) => {
+        modalLoading.value = false;
+        const { data } = response.data; // data = commonResp
+        if (data.success) {
+          modalVisible.value = false;
+          // 重新加载列表
+          handleQuery({
+            page: pagination.value.current,
+            size: pagination.value.pageSize,
+          });
+        }
+      });
+    };
+
     /**
      * 数据查询
      **/
     const handleQuery = (params: any) => {
       loading.value = true;
-      axios.get("/ebook/findAllEbook", params).then((response) => {
+      axios.get("/ebook/findAllEbook", { params }).then((response) => {
         loading.value = false;
         const { data } = response.data;
         ebooks.value = data.list;
-
         console.log("data=", data);
 
         // 重置分页按钮
         pagination.value.current = params.pageNum;
-        pagination.value.total = data.navigatePages;
+        pagination.value.total = data.total;
       });
     };
 
