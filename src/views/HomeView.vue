@@ -95,24 +95,41 @@ export default defineComponent({
   setup() {
     console.log("setup");
     const ebooks = ref();
-    onMounted(() => {
-      axios.get("/ebook/findAllEbook").then((response) => {
-        console.log(response);
-        const data = response.data;
-        ebooks.value = data.data;
-      });
-    });
     const pagination = {
-      onChange: (page: number) => {
-        console.log(page);
+      onChange: (pageNum: number) => {
+        axios
+          .get("/ebook/findAllEbook", {
+            params: { pageNum, pageSize: pagination.pageSize },
+          })
+          .then((response) => {
+            const { data } = response.data;
+            ebooks.value = data.list;
+            pagination.total = data.total;
+            pagination.current = data.pageNum;
+          });
       },
-      pageSize: 3,
+      pageSize: 9,
+      pageSizeOptions: [2, 3, 4, 5, 6],
+      current: 1,
+      total: "",
+      hideOnSinglePage: true,
     };
     const actions: Record<string, string>[] = [
       { type: "StarOutlined", text: "156" },
       { type: "LikeOutlined", text: "156" },
       { type: "MessageOutlined", text: "2" },
     ];
+    onMounted(() => {
+      axios
+        .get("/ebook/findAllEbook", { params: { pageNum: 1, pageSize: 9 } })
+        .then((response) => {
+          console.log(response);
+          const { data } = response.data;
+          ebooks.value = data.list;
+          pagination.total = data.total;
+          pagination.current = data.pageNum;
+        });
+    });
     return {
       ebooks,
       pagination,
