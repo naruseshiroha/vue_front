@@ -8,9 +8,6 @@
         minHeight: '280px',
       }"
     >
-      <!-- <div class="about">
-      <h1>管理电子书页面</h1>
-    </div> -->
       <a-table
         :columns="columns"
         :row-key="(record) => record.id"
@@ -47,9 +44,43 @@
           </a-space>
         </template>
       </a-table>
-    </a-layout-content>
 
-    
+      <div>
+        <a-modal
+          title="Title"
+          v-model:visible="modalVisible"
+          :confirm-loading="modalLoading"
+          @ok="handleModalOk"
+        >
+          <a-form
+            :model="ebookResp"
+            :label-col="{ span: 6 }"
+            :wrapper-col="{ span: 18 }"
+          >
+            <a-form-item label="封面">
+              <a-input v-model:value="ebookResp.cover" />
+            </a-form-item>
+            <a-form-item label="名称">
+              <a-input v-model:value="ebookResp.name" />
+            </a-form-item>
+            <a-form-item label="分类">
+              <a-cascader
+                v-model:value="categoryIds"
+                :field-names="{
+                  label: 'name',
+                  value: 'id',
+                  children: 'children',
+                }"
+                :options="level1"
+              />
+            </a-form-item>
+            <a-form-item label="描述">
+              <a-input v-model:value="ebookResp.description" type="textarea" />
+            </a-form-item>
+          </a-form>
+        </a-modal>
+      </div>
+    </a-layout-content>
   </a-layout>
 </template>
 <script lang="ts">
@@ -107,23 +138,32 @@ export default defineComponent({
     ];
 
     // -------- 表单 ---------
-    const ebook = ref({});
+    const ebookResp = ref({});
     const modalVisible = ref(false);
     const modalLoading = ref(false);
     const handleModalOk = () => {
       modalLoading.value = true;
-      axios.post("/ebook/save", ebook.value).then((response) => {
+      axios.post("/ebook/save", ebookResp.value).then((response) => {
+        // axios.post("/ebook/save", { id: 1 }).then((response) => {
         modalLoading.value = false;
-        const { data } = response.data; // data = commonResp
-        if (data.success) {
+        const { data } = response; // data = commonResp
+        if (data.code === 200) {
           modalVisible.value = false;
           // 重新加载列表
           handleQuery({
-            page: pagination.value.current,
-            size: pagination.value.pageSize,
+            pageNum: pagination.value.current,
+            pageSize: pagination.value.pageSize,
           });
         }
       });
+    };
+
+    /**
+     * 编辑
+     */
+    const edit = (record: any) => {
+      modalVisible.value = true;
+      ebookResp.value = record;
     };
 
     /**
@@ -165,6 +205,13 @@ export default defineComponent({
       columns,
       loading,
       handleTableChange,
+
+      edit,
+      ebookResp,
+
+      modalVisible,
+      modalLoading,
+      handleModalOk,
     };
   },
 });
