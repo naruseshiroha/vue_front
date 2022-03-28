@@ -112,7 +112,7 @@
 import { defineComponent, onMounted, ref } from "vue";
 import axios from "axios";
 import { message } from "ant-design-vue";
-import { Tool } from "@/util/tool";
+import { Tool } from "@/utils/tool";
 export default defineComponent({
   name: "AdminEbook",
   setup() {
@@ -137,14 +137,18 @@ export default defineComponent({
         title: "名称",
         dataIndex: "name",
       },
+      // {
+      //   title: "分类一",
+      //   Key: "category1Id",
+      //   dataIndex: "category1Id",
+      // },
+      // {
+      //   title: "分类二",
+      //   dataIndex: "category2Id",
+      // },
       {
-        title: "分类一",
-        Key: "category1Id",
-        dataIndex: "category1Id",
-      },
-      {
-        title: "分类二",
-        dataIndex: "category2Id",
+        title: "分类",
+        slots: { customRender: "category" },
       },
       {
         title: "文档数",
@@ -198,11 +202,14 @@ export default defineComponent({
     };
 
     // -------- 表单 ---------
-    const ebook = ref({});
+    const categoryIds = ref();
+    const ebook = ref();
     const modalVisible = ref(false);
     const modalLoading = ref(false);
     const handleModalOk = () => {
       modalLoading.value = true;
+      ebook.value.category1Id = categoryIds.value[0];
+      ebook.value.category2Id = categoryIds.value[1];
       axios.post("/ebook/save", ebook.value).then((response) => {
         modalLoading.value = false;
         const { data } = response; // data = commonResp
@@ -226,6 +233,7 @@ export default defineComponent({
       modalVisible.value = true;
       // ebook.value=record
       ebook.value = Tool.copy(record);
+      categoryIds.value = [ebook.value.category1Id, ebook.value.category2Id];
     };
 
     /**
@@ -251,11 +259,52 @@ export default defineComponent({
       });
     };
 
-    onMounted(() => {
-      handleQuery({
-        pageNum: 1,
-        pageSize: pagination.value.pageSize,
+    const level1 = ref();
+    let categorys: any;
+    /**
+     * 查询所有分类
+     **/
+    const handleQueryCategory = () => {
+      loading.value = true;
+      // 如果不清空现有数据，则编辑保存重新加载数据后，再点编辑，则列表显示的还是编辑前的数据
+      ebooks.value = [];
+      axios.get("/category/all").then((response) => {
+        loading.value = false;
+        const { data } = response;
+        if (data.code === 200) {
+          categorys = data.data;
+          console.log("原始数组：", categorys);
+
+          level1.value = [];
+          level1.value = Tool.array2Tree(categorys, 0);
+          console.log("树形结构：", level1.value);
+          // 加载完分类后，再加载电子书，否则会报forEach undefined的错误
+          // 列表渲染的时候，如果还没取到分类数据就会报错；
+          handleQuery({
+            pageNum: 1,
+            pageSize: pagination.value.pageSize,
+          });
+        } else {
+          message.error(data.message);
+        }
       });
+    };
+
+    const getCategoryName = (cid: number) => {
+      let result = "";
+      categorys.forEach((item: any) => {
+        if (item != null) {
+          if (item.id === cid) {
+            // return item.name; // 注意，这里直接return不起作用
+            result = item.name;
+          }
+        }
+      });
+      return result;
+    };
+
+    onMounted(() => {
+      handleQueryCategory();
     });
 
     return {
@@ -275,6 +324,10 @@ export default defineComponent({
       modalVisible,
       modalLoading,
       handleModalOk,
+
+      categoryIds,
+      level1,
+      getCategoryName,
     };
   },
 });
