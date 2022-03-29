@@ -111,9 +111,6 @@ import axios from "axios";
 import { message } from "ant-design-vue";
 import { Tool } from "@/utils/tool";
 import { useRoute } from "vue-router";
-// import MyEditor from "@/components/MyEditor.vue";
-// import E from "wangeditor";
-
 import {
   Editor,
   Toolbar,
@@ -123,7 +120,6 @@ import {
 
 export default defineComponent({
   components: {
-    // MyEditor,
     Editor,
     Toolbar,
   },
