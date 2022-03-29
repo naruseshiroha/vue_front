@@ -8,81 +8,66 @@
         minHeight: '280px',
       }"
     >
-      <!-- <div class="about">
-              <h1>管理文档页面</h1>
-            </div> -->
-      <p>
-        <a-form layout="inline" :model="param">
-          <a-form-item>
-            <a-button type="primary" @click="handleQuery()"> 刷新 </a-button>
-          </a-form-item>
-          <a-form-item>
-            <a-button type="primary" @click="add()"> 新增 </a-button>
-          </a-form-item>
-        </a-form>
-      </p>
-      <a-table
-        :columns="columns"
-        :row-key="'record=>record.id'"
-        :data-source="level1"
-        :pagination="false"
-        :loading="loading"
-      >
-        <!-- @change="handleTableChange" -->
-        <template #cover="{ text: cover }">
-          <img v-if="cover" :src="cover" alt="avatar" />
-        </template>
-        <template v-slot:doc="{ record }">
-          <span
-            >{{ getDocName(record.doc1Id) }} /
-            {{ getDocName(record.doc2Id) }}</span
+      <a-row :gutter="24">
+        <a-col :span="12">
+          <p>
+            <a-form layout="inline" :model="param">
+              <a-form-item>
+                <a-button type="primary" @click="handleQuery()">
+                  刷新
+                </a-button>
+              </a-form-item>
+              <a-form-item>
+                <a-button type="primary" @click="add()"> 新增 </a-button>
+              </a-form-item>
+            </a-form>
+          </p>
+          <a-table
+            v-if="level1.length > 0"
+            :columns="columns"
+            :row-key="'record=>record.id'"
+            :data-source="level1"
+            :pagination="false"
+            :loading="loading"
+            size="small"
+            :defaultExpandAllRows="false"
           >
-        </template>
-        <template v-slot:action="{ record }">
-          <a-space size="small">
-            <router-link :to="'/admin/doc?docId=' + record.id">
-              <a-button type="primary"> 文档管理 </a-button>
-            </router-link>
-            <a-button type="primary" @click="edit(record)"> 编辑 </a-button>
-            <a-popconfirm
-              title="删除后不可恢复，确认删除?"
-              ok-text="是"
-              cancel-text="否"
-              @confirm="handleDelete(record.id)"
-            >
-              <a-button type="danger"> 删除 </a-button>
-            </a-popconfirm>
-          </a-space>
-        </template>
-      </a-table>
-
-      <!--点击编辑弹出的modal框-->
-      <div>
-        <a-modal
-          title="Title"
-          v-model:visible="modalVisible"
-          :confirm-loading="modalLoading"
-          @ok="handleModalOk"
-        >
-          <a-form
-            :model="doc"
-            :label-col="{ span: 6 }"
-            :wrapper-col="{ span: 18 }"
-          >
-            <a-form-item label="名称">
-              <a-input v-model:value="doc.name" />
-            </a-form-item>
-            <a-form-item label="父文档">
-              <!-- <a-select v-model:value="doc.parent" ref="select">
-                <a-select-option :value="0">无</a-select-option>
-                <a-select-option
-                  v-for="c in level1"
-                  :key="c.id"
-                  :value="c.id"
-                  :disabled="doc.id === c.id"
-                  >{{ c.name }}</a-select-option
+            <template #name="{ text: record }">
+              {{ record.sort }} {{ text }}
+            </template>
+            <template v-slot:action="{ record }">
+              <a-space size="small">
+                <router-link :to="'/admin/doc?docId=' + record.id">
+                  <a-button type="primary" size="small"> 文档管理 </a-button>
+                </router-link>
+                <a-button type="primary" @click="edit(record)" size="small">
+                  编辑
+                </a-button>
+                <a-popconfirm
+                  title="删除后不可恢复，确认删除?"
+                  ok-text="是"
+                  cancel-text="否"
+                  @confirm="handleDelete(record.id)"
                 >
-              </a-select> -->
+                  <a-button type="danger" size="small"> 删除 </a-button>
+                </a-popconfirm>
+              </a-space>
+            </template>
+          </a-table>
+        </a-col>
+        <a-col :span="12">
+          <p>
+            <a-form layout="inline" :model="param">
+              <a-form-item>
+                <a-button type="primary" @click="handleSave()"> 保存 </a-button>
+              </a-form-item>
+            </a-form>
+          </p>
+          <a-form :model="doc" layout="vertical">
+            <a-form-item>
+              <a-input v-model:value="doc.name" placeholder="名字" />
+            </a-form-item>
+            <a-form-item>
               <a-tree-select
                 v-model:value="doc.parent"
                 style="width: 100%"
@@ -94,15 +79,15 @@
               >
               </a-tree-select>
             </a-form-item>
-            <a-form-item label="顺序">
-              <a-input v-model:value="doc.sort" />
+            <a-form-item>
+              <a-input v-model:value="doc.sort" placeholder="顺序" />
             </a-form-item>
-            <a-form-item label="内容">
+            <a-form-item>
               <my-editor></my-editor>
             </a-form-item>
           </a-form>
-        </a-modal>
-      </div>
+        </a-col>
+      </a-row>
     </a-layout-content>
   </a-layout>
 </template>
@@ -124,11 +109,14 @@ export default defineComponent({
     const param = ref();
     param.value = {};
     const docs = ref();
+    docs.value = {};
+
     const loading = ref(false);
     const columns = [
       {
         title: "名称",
         dataIndex: "name",
+        // slots: { customRender: "name" },
       },
       {
         title: "父文档",
@@ -139,7 +127,6 @@ export default defineComponent({
         title: "排序",
         dataIndex: "sort",
       },
-
       {
         title: "操作",
         key: "action",
@@ -158,6 +145,7 @@ export default defineComponent({
      * }]
      */
     const level1 = ref(); // 一级文档树，children属性就是二级文档
+    level1.value = [];
     /**
      * 数据查询
      **/
@@ -175,6 +163,9 @@ export default defineComponent({
           level1.value = [];
           level1.value = Tool.array2Tree(docs.value, 0);
           console.log("树形结构的数组：", level1);
+
+          treeSelectData.value = Tool.copy(level1.value);
+          treeSelectData.value.unshift({ id: 0, name: "无" });
         } else {
           message.error(data.message);
         }
@@ -193,7 +184,7 @@ export default defineComponent({
     // const editor = new E("#content");
     // editor.config.zIndex = 0; // 编辑时下拉不被遮挡住，修改它显示层级级别
 
-    const handleModalOk = () => {
+    const handleSave = () => {
       modalLoading.value = true;
       axios.post("/doc/save", doc.value).then((response) => {
         modalLoading.value = false;
@@ -264,6 +255,8 @@ export default defineComponent({
       doc.value = {
         ebookId: route.query.ebookId,
       };
+      treeSelectData.value = Tool.copy(level1.value);
+      treeSelectData.value.unshift({ id: 0, name: "无" });
     };
 
     /**
@@ -320,7 +313,7 @@ export default defineComponent({
       edit,
       modalVisible,
       modalLoading,
-      handleModalOk,
+      handleSave,
       doc,
       add,
       handleDelete,
@@ -332,3 +325,12 @@ export default defineComponent({
   },
 });
 </script>
+
+<style>
+.w-e-menu {
+  z-index: 2 !important;
+}
+.w-e-text-container {
+  z-index: 1 !important;
+}
+</style>
