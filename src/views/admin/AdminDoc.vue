@@ -83,7 +83,21 @@
               <a-input v-model:value="doc.sort" placeholder="顺序" />
             </a-form-item>
             <a-form-item>
-              <my-editor></my-editor>
+              <div style="border: 1px solid #ccc">
+                <Toolbar
+                  :editorId="editorId"
+                  :defaultConfig="toolbarConfig"
+                  :mode="mode"
+                  style="border-bottom: 1px solid #ccc"
+                />
+                <Editor
+                  :editorId="editorId"
+                  :defaultConfig="editorConfig"
+                  :defaultContent="defaultContent"
+                  :mode="mode"
+                  style="height: 500px; overflow-y: hidden"
+                />
+              </div>
             </a-form-item>
           </a-form>
         </a-col>
@@ -92,16 +106,27 @@
   </a-layout>
 </template>
 <script lang="ts">
-import { defineComponent, onMounted, ref } from "vue";
+import { onBeforeUnmount, defineComponent, onMounted, ref } from "vue";
 import axios from "axios";
 import { message } from "ant-design-vue";
 import { Tool } from "@/utils/tool";
 import { useRoute } from "vue-router";
-import MyEditor from "@/components/MyEditor.vue";
+// import MyEditor from "@/components/MyEditor.vue";
 // import E from "wangeditor";
 
+import {
+  Editor,
+  Toolbar,
+  getEditor,
+  removeEditor,
+} from "@wangeditor/editor-for-vue";
+
 export default defineComponent({
-  components: { MyEditor },
+  components: {
+    // MyEditor,
+    Editor,
+    Toolbar,
+  },
   name: "AdminDoc",
   setup() {
     // 通过路由内置函数得到一个路由的变量route，而这个变量里面就有路由的信息，包括路径参数
@@ -299,10 +324,31 @@ export default defineComponent({
       });
     };
 
+    // Editor
+    const editorId = `w-e-${Math.random().toString().slice(-5)}`; //【注意】编辑器 id ，要全局唯一
+
+    // defaultContent (JSON 格式) 和 defaultHtml (HTML 格式) ，二选一
+    // const defaultHtml = "一行文字";
+    const defaultContent = [
+      {
+        type: "paragraph",
+        children: [{ text: "" }],
+      },
+    ];
+
+    const toolbarConfig = {};
+    const editorConfig = { placeholder: "请输入内容..." };
+
+    // 组件销毁时，也及时销毁编辑器
+    onBeforeUnmount(() => {
+      const editor = getEditor(editorId);
+      if (editor == null) return;
+
+      editor.destroy();
+      removeEditor(editorId);
+    });
     onMounted(() => {
       handleQuery();
-      // console.log("editor", editor);
-      // editor.create();
     });
     return {
       // docs,
@@ -319,18 +365,24 @@ export default defineComponent({
       handleDelete,
       param,
       handleQuery,
-
       treeSelectData,
+
+      // editor
+      mode: "default",
+      editorId,
+      defaultContent,
+      toolbarConfig,
+      editorConfig,
     };
   },
 });
 </script>
-
+<style src="@wangeditor/editor/dist/css/style.css"></style>
 <style>
-.w-e-menu {
+/* .w-e-menu {
   z-index: 2 !important;
 }
 .w-e-text-container {
   z-index: 1 !important;
-}
+} */
 </style>
