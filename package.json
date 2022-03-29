@@ -11,6 +11,8 @@
   },
   "dependencies": {
     "@ant-design/icons-vue": "^6.0.1",
+    "@wangeditor/editor": "^0.15.16",
+    "@wangeditor/editor-for-vue": "^5.1.8-11",
     "ant-design-vue": "^2.2.8",
     "axios": "^0.26.0",
     "vue": "^3.2.13",
