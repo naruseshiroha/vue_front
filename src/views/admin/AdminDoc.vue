@@ -83,7 +83,7 @@
               <a-input v-model:value="doc.sort" placeholder="顺序" />
             </a-form-item>
             <a-form-item>
-              <div style="border: 1px solid #ccc" v-if="isShowEditor">
+              <!-- <div style="border: 1px solid #ccc" v-if="isShowEditor">
                 <Toolbar
                   :editorId="editorId"
                   :defaultConfig="toolbarConfig"
@@ -98,7 +98,8 @@
                   style="height: 500px; overflow-y: hidden"
                 />
               </div>
-              <div v-else></div>
+              <div v-else></div> -->
+              <div id="content"></div>
             </a-form-item>
           </a-form>
         </a-col>
@@ -107,23 +108,14 @@
   </a-layout>
 </template>
 <script lang="ts">
-import { onBeforeUnmount, defineComponent, onMounted, ref } from "vue";
+import { defineComponent, onMounted, ref } from "vue";
 import axios from "axios";
 import { message } from "ant-design-vue";
 import { Tool } from "@/utils/tool";
 import { useRoute } from "vue-router";
-import {
-  Editor,
-  Toolbar,
-  getEditor,
-  removeEditor,
-} from "@wangeditor/editor-for-vue";
+import E from "wangeditor";
 
 export default defineComponent({
-  components: {
-    Editor,
-    Toolbar,
-  },
   name: "AdminDoc",
   setup() {
     // 通过路由内置函数得到一个路由的变量route，而这个变量里面就有路由的信息，包括路径参数
@@ -170,31 +162,6 @@ export default defineComponent({
      */
     const level1 = ref(); // 一级文档树，children属性就是二级文档
     level1.value = [];
-    /**
-     * 数据查询
-     **/
-    const handleQuery = () => {
-      loading.value = true;
-      doc.value = {};
-      isShowEditor.value = false;
-      defaultHtml.value = "";
-      level1.value = []; // 编辑之前清空下之前记录的数据
-      axios.get("/doc/all").then((response) => {
-        loading.value = false;
-        const { data } = response;
-        if (data.code === 200) {
-          docs.value = data.data;
-          level1.value = [];
-          level1.value = Tool.array2Tree(docs.value, 0);
-          treeSelectData.value = Tool.copy(level1.value);
-          treeSelectData.value.unshift({ id: 0, name: "无" });
-          isShowEditor.value = true;
-        } else {
-          message.error(data.message);
-          isShowEditor.value = true;
-        }
-      });
-    };
 
     // -------- 表单 ---------
     const doc = ref();
@@ -203,19 +170,41 @@ export default defineComponent({
     const modalLoading = ref(false);
 
     // Editor
-    const isShowEditor = ref(true);
-    const editorId = `w-e-${Math.random().toString().slice(-5)}`; //【注意】编辑器 id ，要全局唯一
-    // defaultContent (JSON 格式) 和 defaultHtml (HTML 格式) ，二选一
-    const defaultHtml = ref("");
+    let editor: any;
+    const createEditor = () => {
+      editor = new E("#content");
+      editor.create();
+      editor.config.zIndex = 0;
 
-    const toolbarConfig = {};
-    const editorConfig = { placeholder: "请输入内容..." };
+      console.log("config", editor.config);
+    };
+
+    /**
+     * 数据查询
+     **/
+    const handleQuery = () => {
+      loading.value = true;
+      doc.value = {};
+      level1.value = []; // 编辑之前清空下之前记录的数据
+      axios.get("/doc/all").then((response) => {
+        loading.value = false;
+        editor.txt.html("");
+        const { data } = response;
+        if (data.code === 200) {
+          docs.value = data.data;
+          level1.value = [];
+          level1.value = Tool.array2Tree(docs.value, 0);
+          treeSelectData.value = Tool.copy(level1.value);
+          treeSelectData.value.unshift({ id: 0, name: "无" });
+        } else {
+          message.error(data.message);
+        }
+      });
+    };
 
     const handleSave = () => {
       modalLoading.value = true;
-      // const editor: any = getEditor(editorId);
-      // console.log(editor.getHtml());
-      doc.value.content = defaultHtml.value;
+      doc.value.content = editor.txt.html();
       console.log("doc", doc.value);
       axios.post("/doc/save", doc.value).then((response) => {
         modalLoading.value = false;
@@ -266,16 +255,13 @@ export default defineComponent({
      * 内容查询
      */
     const handleQueryContent = () => {
-      isShowEditor.value = false;
+      // isShowEditor.value = false;
       axios.get("/doc/find-content/" + doc.value.id).then((response) => {
         const { data } = response;
         if (data.code == 200) {
-          defaultHtml.value = data.data;
-          isShowEditor.value = true;
-          // editor.txt.html(data.content);
+          editor.txt.html(data.data);
         } else {
           message.error(data.message);
-          isShowEditor.value = true;
         }
       });
     };
@@ -349,16 +335,9 @@ export default defineComponent({
       });
     };
 
-    // 组件销毁时，也及时销毁编辑器
-    onBeforeUnmount(() => {
-      const editor = getEditor(editorId);
-      if (editor == null) return;
-
-      editor.destroy();
-      removeEditor(editorId);
-    });
     onMounted(() => {
       handleQuery();
+      createEditor();
     });
     return {
       // docs,
@@ -376,25 +355,18 @@ export default defineComponent({
       param,
       handleQuery,
       treeSelectData,
-
-      // editor
-      isShowEditor,
-      mode: "default",
-      editorId,
-      // defaultContent,
-      defaultHtml,
-      toolbarConfig,
-      editorConfig,
     };
   },
 });
 </script>
-<style src="@wangeditor/editor/dist/css/style.css"></style>
 <style>
-/* .w-e-menu {
+.w-e-menu {
   z-index: 2 !important;
 }
 .w-e-text-container {
   z-index: 1 !important;
-} */
+}
+.w-e-toolbar {
+  z-index: 2 !important;
+}
 </style>
