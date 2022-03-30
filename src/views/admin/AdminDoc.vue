@@ -17,9 +17,9 @@
                   刷新
                 </a-button>
               </a-form-item>
-              <a-form-item>
+              <!-- <a-form-item>
                 <a-button type="primary" @click="add()"> 新增 </a-button>
-              </a-form-item>
+              </a-form-item> -->
             </a-form>
           </p>
           <a-table
@@ -37,9 +37,9 @@
             </template>
             <template v-slot:action="{ record }">
               <a-space size="small">
-                <router-link :to="'/admin/doc?docId=' + record.id">
+                <!-- <router-link :to="'/admin/doc?docId=' + record.id">
                   <a-button type="primary" size="small"> 文档管理 </a-button>
-                </router-link>
+                </router-link> -->
                 <a-button type="primary" @click="edit(record)" size="small">
                   编辑
                 </a-button>
@@ -83,7 +83,7 @@
               <a-input v-model:value="doc.sort" placeholder="顺序" />
             </a-form-item>
             <a-form-item>
-              <div style="border: 1px solid #ccc">
+              <div style="border: 1px solid #ccc" v-if="isShowEditor">
                 <Toolbar
                   :editorId="editorId"
                   :defaultConfig="toolbarConfig"
@@ -93,11 +93,12 @@
                 <Editor
                   :editorId="editorId"
                   :defaultConfig="editorConfig"
-                  :defaultContent="defaultContent"
+                  :defaultHtml="defaultHtml"
                   :mode="mode"
                   style="height: 500px; overflow-y: hidden"
                 />
               </div>
+              <div v-else></div>
             </a-form-item>
           </a-form>
         </a-col>
@@ -133,6 +134,8 @@ export default defineComponent({
     docs.value = {};
 
     const loading = ref(false);
+    const treeSelectData = ref();
+    treeSelectData.value = [];
     const columns = [
       {
         title: "名称",
@@ -172,46 +175,54 @@ export default defineComponent({
      **/
     const handleQuery = () => {
       loading.value = true;
+      doc.value = {};
+      isShowEditor.value = false;
+      defaultHtml.value = "";
       level1.value = []; // 编辑之前清空下之前记录的数据
       axios.get("/doc/all").then((response) => {
-        console.log("查询11111111111");
         loading.value = false;
         const { data } = response;
         if (data.code === 200) {
           docs.value = data.data;
-          console.log("原始数组：", docs.value);
-
           level1.value = [];
           level1.value = Tool.array2Tree(docs.value, 0);
-          console.log("树形结构的数组：", level1);
-
           treeSelectData.value = Tool.copy(level1.value);
           treeSelectData.value.unshift({ id: 0, name: "无" });
+          isShowEditor.value = true;
         } else {
           message.error(data.message);
+          isShowEditor.value = true;
         }
       });
     };
 
     // -------- 表单 ---------
-    const treeSelectData = ref();
-    treeSelectData.value = [];
-
-    const doc = ref({});
+    const doc = ref();
+    doc.value = {};
     const modalVisible = ref(false);
     const modalLoading = ref(false);
 
-    // 创建富文本框对象，此时还没有富文本框显示，真正创建还需要调用一个create方法
-    // const editor = new E("#content");
-    // editor.config.zIndex = 0; // 编辑时下拉不被遮挡住，修改它显示层级级别
+    // Editor
+    const isShowEditor = ref(true);
+    const editorId = `w-e-${Math.random().toString().slice(-5)}`; //【注意】编辑器 id ，要全局唯一
+    // defaultContent (JSON 格式) 和 defaultHtml (HTML 格式) ，二选一
+    const defaultHtml = ref("");
+
+    const toolbarConfig = {};
+    const editorConfig = { placeholder: "请输入内容..." };
 
     const handleSave = () => {
       modalLoading.value = true;
+      // const editor: any = getEditor(editorId);
+      // console.log(editor.getHtml());
+      doc.value.content = defaultHtml.value;
+      console.log("doc", doc.value);
       axios.post("/doc/save", doc.value).then((response) => {
         modalLoading.value = false;
         const { data } = response; // data = commonResp
         if (data.code === 200) {
           modalVisible.value = false;
+          message.success("保存成功！");
           // 重新加载列表
           handleQuery();
         } else {
@@ -252,13 +263,30 @@ export default defineComponent({
     };
 
     /**
+     * 内容查询
+     */
+    const handleQueryContent = () => {
+      isShowEditor.value = false;
+      axios.get("/doc/find-content/" + doc.value.id).then((response) => {
+        const { data } = response;
+        if (data.code == 200) {
+          defaultHtml.value = data.data;
+          isShowEditor.value = true;
+          // editor.txt.html(data.content);
+        } else {
+          message.error(data.message);
+          isShowEditor.value = true;
+        }
+      });
+    };
+
+    /**
      * 编辑
      */
     const edit = (record: any) => {
-      console.log("record", record);
-
       modalVisible.value = true;
       doc.value = Tool.copy(record);
+      handleQueryContent();
 
       // 不能选择当前节点及其所有子孙节点，作为父节点，会使树断开
       treeSelectData.value = Tool.copy(level1.value);
@@ -271,14 +299,15 @@ export default defineComponent({
     /**
      * 新增
      */
-    const add = () => {
-      modalVisible.value = true;
-      doc.value = {
-        ebookId: route.query.ebookId,
-      };
-      treeSelectData.value = Tool.copy(level1.value);
-      treeSelectData.value.unshift({ id: 0, name: "无" });
-    };
+    // const add = () => {
+    //   isShowEditor.value = false;
+    //   // modalVisible.value = true;
+    //   doc.value = {
+    //     ebookId: route.query.ebookId,
+    //   };
+    //   treeSelectData.value = Tool.copy(level1.value);
+    //   treeSelectData.value.unshift({ id: 0, name: "无" });
+    // };
 
     /**
      * 获取某节点及其子孙节点全部id
@@ -320,21 +349,6 @@ export default defineComponent({
       });
     };
 
-    // Editor
-    const editorId = `w-e-${Math.random().toString().slice(-5)}`; //【注意】编辑器 id ，要全局唯一
-
-    // defaultContent (JSON 格式) 和 defaultHtml (HTML 格式) ，二选一
-    // const defaultHtml = "一行文字";
-    const defaultContent = [
-      {
-        type: "paragraph",
-        children: [{ text: "" }],
-      },
-    ];
-
-    const toolbarConfig = {};
-    const editorConfig = { placeholder: "请输入内容..." };
-
     // 组件销毁时，也及时销毁编辑器
     onBeforeUnmount(() => {
       const editor = getEditor(editorId);
@@ -357,16 +371,18 @@ export default defineComponent({
       modalLoading,
       handleSave,
       doc,
-      add,
+      // add,
       handleDelete,
       param,
       handleQuery,
       treeSelectData,
 
       // editor
+      isShowEditor,
       mode: "default",
       editorId,
-      defaultContent,
+      // defaultContent,
+      defaultHtml,
       toolbarConfig,
       editorConfig,
     };
