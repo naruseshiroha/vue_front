@@ -186,7 +186,7 @@ export default defineComponent({
       loading.value = true;
       doc.value = {};
       level1.value = []; // 编辑之前清空下之前记录的数据
-      axios.get("/doc/all").then((response) => {
+      axios.get("/doc/all/" + route.query.ebookId).then((response) => {
         loading.value = false;
         editor.txt.html("");
         const { data } = response;
